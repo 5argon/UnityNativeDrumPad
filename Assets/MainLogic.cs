@@ -9,11 +9,6 @@ using UnityEngine.UI;
 
 public class MainLogic : MonoBehaviour
 {
-    [Header("Check this manually if you are using IL2CPP on Android. It will avoid using touch callback to play audio.")]
-    public bool buildingWithIl2cppOnAndroid;
-
-    [Space]
-
     public Toggle nativeAudio;
     public Toggle nativeTouch;
 
@@ -26,9 +21,19 @@ public class MainLogic : MonoBehaviour
 
     private Color nativeAudioOriginalGridColor;
     private Color nativeTouchOriginalGridColor;
+    private static Vector2Int cachedStaticRealScreenResolution;
 
     public bool NativeAudioChecked => nativeAudio.isOn;
     public bool NativeTouchChecked => nativeTouch.isOn;
+
+#if NATIVE_AUDIO
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void Init()
+    {
+        //This is so that it comes before all Pad's `Awake` which attempts to load the audio.
+        NativeAudio.Initialize();
+    }
+#endif
 
     /// <summary>
     /// This cannot be Awake, at Awake the uGUI layout system is still not ready and <see cref="Canvas.ForceUpdateCanvases"> returns something wrong.
@@ -40,17 +45,29 @@ public class MainLogic : MonoBehaviour
         Canvas.ForceUpdateCanvases(); 
         PrecalculateRect();
 
+        //Make the toggle disappear for those without the plugins.
+        ShowHideToggleOnPreprocessor();
+
         this.nativeAudioOriginalGridColor = nativeAudioImage.color;
         this.nativeTouchOriginalGridColor= nativeTouchImage.color;
         NativeAudioToggleUpdate();
         NativeTouchToggleUpdate();
+    }
 
-        NativeAudio.Initialize();
+    private void ShowHideToggleOnPreprocessor()
+    {
+#if !NATIVE_AUDIO
+        nativeAudio.gameObject.SetActive(true);
+#endif
+#if !NATIVE_TOUCH
+        nativeTouch.gameObject.SetActive(true);
+#endif
     }
 
     public void NativeAudioToggleUpdate()
     {
-        if(NativeAudioChecked)
+#if NATIVE_AUDIO
+        if (NativeAudioChecked)
         {
             nativeAudioImage.color = nativeAudioActiveGridColor;
         }
@@ -58,6 +75,7 @@ public class MainLogic : MonoBehaviour
         {
             nativeAudioImage.color = nativeAudioOriginalGridColor;
         }
+#endif
     }
 
     private static List<(Rect rect, Pad pad)> rectAndPad = new List<(Rect, Pad)>(16);
@@ -76,8 +94,9 @@ public class MainLogic : MonoBehaviour
     /// Or else, we would have to wait for some main thread code which could access all the <see cref="Pad"> normally, and check the touches from
     /// <see cref="NativeTouch.touches"> instead.
     /// </summary>
-    private void PrecalculateRect()
+    public void PrecalculateRect()
     {
+#if NATIVE_TOUCH
         rectAndPad.Clear();
         foreach(Pad p in allPads)
         {
@@ -97,7 +116,7 @@ public class MainLogic : MonoBehaviour
 
             //var rectRelativeToCanvasRoot = new Rect(v3[0].x, v3[0].y, v3[3].x - v3[0].x, v3[1].y - v3[0].y);
 
-            //^^^ This is almost correct, however it is referenced from the center of the canvas since the pivot is locked at 0.5,0.5
+            //^^^ This is almost correct, however it is referenced from the center of the canvas since the root canvas pivot is locked at 0.5,0.5
             //We fix this by adding to the rect position point by half of the size.
 
             var canvasSize = rootCanvasRt.sizeDelta;
@@ -112,25 +131,26 @@ public class MainLogic : MonoBehaviour
 
             //Here we cannot use `Screen.___` API since if "(Dynamic) Resulution Scaling" is used that will be changing.
             //But luckily touches from Native Touch stays true to the device's native screen size. 
-            //What size we have to convert to is relative to native screen size. (Of course if we rotate screen, we have to redo the whole thing again.)
+            //What size we have to convert to have to be relative to native screen size. (Of course if we rotate screen, we have to redo the whole thing again.)
 
-            Vector2Int realScreenResolution = NativeTouch.RealScreenResolution();
+            cachedStaticRealScreenResolution = NativeTouch.RealScreenResolution();
 #if UNITY_EDITOR
-            realScreenResolution = Vector2Int.one;
+            cachedStaticRealScreenResolution = Vector2Int.one;
 #endif
             var rectRelativeToRealScreen = new Rect(
-                x: (rectXPos / canvasSize.x) * realScreenResolution.x,
-                y: (rectYPos / canvasSize.y) * realScreenResolution.y,
+                x: (rectXPos / canvasSize.x) * cachedStaticRealScreenResolution.x,
+                y: (rectYPos / canvasSize.y) * cachedStaticRealScreenResolution.y,
                 width: rectWidth,
                 height: rectHeight
             );
 
-            Debug.Log($"{p.name} {rectRelativeToRealScreen} {rt.anchoredPosition} {rt.sizeDelta}");
+            Debug.Log($"Precalculating : {p.name} {rectRelativeToRealScreen} {rt.anchoredPosition} {rt.sizeDelta}");
             rectAndPad.Add((rectRelativeToRealScreen, p));
         }
+#endif
     }
 
-
+#if NATIVE_TOUCH
     /// <summary>
     /// Now instead of relying on `EventTrigger` + `GraphicRaycaster` finding the correct <see cref="Pad"> for us, we must use this
     /// <paramref name="ntd"> directly to find out which pad was touched.
@@ -144,14 +164,42 @@ public class MainLogic : MonoBehaviour
     /// This callback is not necessary in the same thread as Unity (it is like that on Android), so you need to be careful what you could do here.
     /// Luckily Native Audio works (<see cref="AudioSource.Play"> crash Unity on other thread).
     /// 
+    /// Also I avoid Unity physics/raycast stuff since it doesn't work cross thread. Even if it works I think a manual solution could be better.
+    /// 
     /// If you are using Android IL2CPP, the callback is slow so it should not be used. Instead you should check on <see cref="NativeTouch.touches"> somewhere
     /// in your main thread's normal code. It is still faster than <see cref="Input.touches">.
     private static void NativeCallback(NativeTouchData ntd)
     {
-        new float2(ntd.
-        foreach(var item in rectAndPad)
+        //Only care about the down moment, just like "pointer down" on the `EventTrigger`.
+        if(ntd.Phase != TouchPhase.Began) return;
+        Debug.Log($"{ntd}");
+
+        //Don't forget to flip the Y axis coming from native side. The rects to be compared with are computed from `RectTransform` and they are under Unity's convention.
+        //You could also flip those rects in the precalculation to save this flip's CPU cycle..
+        //But I am afraid it might make that logic difficult to understand than flipping the input here.
+        var touchCoordinate = new float2(ntd.X, cachedStaticRealScreenResolution.y - ntd.Y);
+
+        //This is a linear loop, which makes the 16th pad sliiiiiightly slower because it need the run through all other pads.
+        //You can further do micro-optimization (may not be the root of all evil?) by for example, do a binary search based on incoming touch coordinate.
+        //e.g. If it is in the top half of the screen, then no reason to search the lower half pads.
+        //But I am not going to do that for simplicity.
+        foreach (var item in rectAndPad)
         {
-            if(RectContains( item.rect,
+            if (RectContains(item.rect, touchCoordinate))
+            {
+                Debug.Log($"Rect {item.rect} hitted!");
+
+                //This is assuming no one is modifying anything on each Pad. And we know FOR THIS APP that that is the case.
+                //Or else you have to properly put `lock(___)` on the reference type item you fear the main thread might be using at the same time.
+
+                //This method will play an audio natively. If native audio is not enabled, it will play with normal means.
+                //But since this is the callback context and on Android thread is not compatible, `comingFromCallback` will
+                //help us check and prevent the play.
+                item.pad.PlayAudio(comingFromCallback: true);
+
+                //You will hear an audio right now, even before the button lights up due to `EventTrigger`!
+                break;
+            }
         }
 
         bool RectContains(in Rect rect, float2 point)
@@ -159,6 +207,7 @@ public class MainLogic : MonoBehaviour
             return (point.x >= rect.xMin) && (point.x < rect.xMax) && (point.y >= rect.yMin) && (point.y < rect.yMax);
         }
     }
+#endif
 
 
     /// <summary>
@@ -172,19 +221,19 @@ public class MainLogic : MonoBehaviour
     /// However, this is only if the callback is fast. I found that Android Mono and iOS IL2CPP has great callback performance, but not on 
     /// Android IL2CPP. So we will use a "ring buffer iteration" instead of callback if we are using IL2CPP on Android. See the website for explanation.
     /// 
-    /// IL2CPP compile is checked by just the checkbox <see cref="buildingWithIl2cppOnAndroid"> on this component.
+    /// IL2CPP compile or not is checked by the manually defined preprocessor ANDROID_MONO. It is not there by default, so put that in manually if you want to go Mono.
     /// </summary>
     public void NativeTouchToggleUpdate()
     {
+#if NATIVE_TOUCH
         if (NativeTouchChecked)
         {
             nativeTouchImage.color = nativeTouchActiveGridColor;
             NativeTouch.ClearCallbacks();
 
-
             bool useCallback = true;
-#if UNITY_ANDROID
-            useCallback = buildingWithIl2cppOnAndroid ? false : true;
+#if !ANDROID_MONO
+            useCallback = false;
 #endif
             if (useCallback)
             {
@@ -198,5 +247,7 @@ public class MainLogic : MonoBehaviour
             NativeTouch.Stop();
             NativeTouch.ClearCallbacks();
         }
+#endif
     }
+
 }

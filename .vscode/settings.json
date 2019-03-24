@@ -57,9 +57,9 @@
         "[Hail]": {
             "statusBar.background": "#2b343b"
         },
-        "titleBar.activeBackground": "#ea8e9c",
-        "titleBar.inactiveBackground": "#ea8e9c99",
-        "titleBar.activeForeground": "#15202b",
-        "titleBar.inactiveForeground": "#15202b99"
+        "titleBar.activeBackground": "#5103e0",
+        "titleBar.inactiveBackground": "#5103e099",
+        "titleBar.activeForeground": "#e7e7e7",
+        "titleBar.inactiveForeground": "#e7e7e799"
     }
 }

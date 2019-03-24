@@ -790,6 +790,16 @@ PrefabInstance:
       propertyPath: m_Name
       value: NativeTouchToggle
       objectReference: {fileID: 0}
+    - target: {fileID: 5883382182837237245, guid: 4e909dc14d71d443e8e9c8f67f4402d6,
+        type: 3}
+      propertyPath: onValueChanged.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 1326624288}
+    - target: {fileID: 5883382182837237245, guid: 4e909dc14d71d443e8e9c8f67f4402d6,
+        type: 3}
+      propertyPath: onValueChanged.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: NativeTouchToggleUpdate
+      objectReference: {fileID: 0}
     - target: {fileID: 5883382182837237244, guid: 4e909dc14d71d443e8e9c8f67f4402d6,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -894,16 +904,6 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Pivot.y
       value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 5883382182837237245, guid: 4e909dc14d71d443e8e9c8f67f4402d6,
-        type: 3}
-      propertyPath: onValueChanged.m_PersistentCalls.m_Calls.Array.data[0].m_Target
-      value: 
-      objectReference: {fileID: 1326624288}
-    - target: {fileID: 5883382182837237245, guid: 4e909dc14d71d443e8e9c8f67f4402d6,
-        type: 3}
-      propertyPath: onValueChanged.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: NativeTouchToggleUpdate
       objectReference: {fileID: 0}
     - target: {fileID: 5883382181745072826, guid: 4e909dc14d71d443e8e9c8f67f4402d6,
         type: 3}
@@ -1113,6 +1113,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1326624289}
   - component: {fileID: 1326624288}
+  - component: {fileID: 1326624290}
   m_Layer: 0
   m_Name: MainLogic
   m_TagString: Untagged
@@ -1132,7 +1133,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ec24ccf26c1f54639973a02f1fcca41c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  buildingWithIl2cppOnAndroid: 0
   nativeAudio: {fileID: 389779571}
   nativeTouch: {fileID: 386713162}
   nativeAudioImage: {fileID: 1580334378}
@@ -1171,6 +1171,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1326624290
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1326624287}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33a188727a9e24a869c2064ffa245f94, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mainLogic: {fileID: 1326624288}
 --- !u!114 &1525945491 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 242792679603611179, guid: 7002ae25104764cf4aa04cf38bb89d9e,
@@ -2221,6 +2234,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: NativeAudioToggle
       objectReference: {fileID: 0}
+    - target: {fileID: 5883382182837237245, guid: 4e909dc14d71d443e8e9c8f67f4402d6,
+        type: 3}
+      propertyPath: onValueChanged.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 1326624288}
     - target: {fileID: 5883382182837237244, guid: 4e909dc14d71d443e8e9c8f67f4402d6,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -2326,11 +2344,6 @@ PrefabInstance:
       propertyPath: m_Pivot.y
       value: 1
       objectReference: {fileID: 0}
-    - target: {fileID: 5883382182837237245, guid: 4e909dc14d71d443e8e9c8f67f4402d6,
-        type: 3}
-      propertyPath: onValueChanged.m_PersistentCalls.m_Calls.Array.data[0].m_Target
-      value: 
-      objectReference: {fileID: 1326624288}
     - target: {fileID: 5883382181745072826, guid: 4e909dc14d71d443e8e9c8f67f4402d6,
         type: 3}
       propertyPath: m_SizeDelta.y
